@@ -2,44 +2,123 @@
 
 namespace AlbumTest\Controller;
 
-use Zend\Test\PHPUnit\Controller\AbstractHttpControllerTestCase;
+use AlbumTest\Bootstrap;
+use Zend\Mvc\Router\Http\TreeRouteStack as HttpRouter;
+use Album\Controller\AlbumController;
+use Zend\Http\Request;
+use Zend\Http\Response;
+use Zend\Mvc\MvcEvent;
+use Zend\Mvc\Router\RouteMatch;
+use PHPUnit_Framework_TestCase;
 
-class AlbumControllerTest extends AbstractHttpControllerTestCase
+class AlbumControllerTest extends \PHPUnit_Framework_TestCase
 {
-    protected $traceError = true;
-    
-    public function setUp()
+
+    protected $controller;
+    protected $request;
+    protected $response;
+    protected $routeMatch;
+    protected $event;
+    protected $albumTable;
+    protected $albumList;
+
+    protected function setUp()
     {
-        $this->setApplicationConfig(
-            include 'config/application.config.php'
-        );
-        parent::setUp();
+        $serviceManager = Bootstrap::getServiceManager();
+        $this->controller = new AlbumController();
+        $this->request = new Request();
+        $this->routeMatch = new RouteMatch(array('controller' => 'album'));
+        $this->event = new MvcEvent();
+        $config = $serviceManager->get('Config');
+        $routerConfig = isset($config['router']) ? $config['router'] : array();
+        $router = HttpRouter::factory($routerConfig);
+
+        $this->event->setRouter($router);
+        $this->event->setRouteMatch($this->routeMatch);
+        $this->controller->setEvent($this->event);
+        $this->controller->setServiceLocator($serviceManager);
+
+        $this->setAlbumTable();
+        $this->setAlbumList();
+    }
+
+    public function setAlbumTable()
+    {
+        $this->albumTable = $this->getMockBuilder('Album\Model\AlbumTable')
+            ->disableOriginalConstructor()
+            ->getMock();
+    }
+
+    public function setAlbumList()
+    {
+        $this->albumList = array('var' => 'test');
+    }
+    
+    public function prepAlbumTable()
+    {
+        $this->albumTable->expects($this->once())
+            ->method('fetchAll')
+            ->will($this->returnValue($this->albumList));
+    }
+
+    
+    
+    public function testGetAlbumTable()
+    {
+        $isAlbumTable = false;
+        $this->prepServiceManager();
+        
+        $className = get_class($this->controller->getAlbumTable());
+        if (strpos($className, 'Mock_AlbumTable_') !== false) {
+            $isAlbumTable = true;
+        }
+        $this->assertTrue($isAlbumTable);
+    }
+    
+    public function prepServiceManager()
+    {
+        $serviceManager = $this->controller->getServiceLocator();
+        $serviceManager->setAllowOverride(true);
+        $serviceManager->setService('Album\Model\AlbumTable', $this->albumTable);
     }
 
     public function testIndexActionCanBeAccessed()
     {
-        $this->dispatch('/album');
-        $this->assertPageFound();
+        $this->prepAlbumTable();
+        $this->prepServiceManager();
+
+        $this->routeMatch->setParam('action', 'index');
+        $result = $this->controller->dispatch($this->request);
+        $viewVars = $result->getVariables();
+        $this->assertEquals($this->albumList, $viewVars['albums']);
+        
+        $this->checkResponsecode($this->controller);
     }
     
-    public function testAddActionCanBeAccessed()
+    public function checkResponseCode($controller)
     {
-        $this->dispatch('/album/add');
-        $this->assertPageFound();
+        $response = $controller->getResponse();
+        $this->assertEquals(200, $response->getStatusCode());
     }
-    
-    public function testEditActionCanBeAccessed()
-    {
-        $this->dispatch('/album/edit');
-        $this->assertPageFound();
-    }
-    
-    public function testDeleteActionCanBeAccessed()
-    {
-        $this->dispatch('/album/delete');
-        $this->assertPageFound();
-    }
-    
+
+//    public function testAddActionCanBeAccessed()
+//    {
+//        $this->dispatch('/album/add');
+//        $this->assertPageFound();
+//    }
+//
+//    public function testEditActionCanBeAccessed()
+//    {
+//        $this->dispatch('/album/edit');
+//        $this->assertPageFound();
+//    }
+//
+//    public function testDeleteActionCanBeAccessed()
+//    {
+//        $this->dispatch('/album/delete');
+//        $this->assertPageFound();
+//    }
+
     protected function assertPageFound()
     {
         $this->assertResponseStatusCode(200);

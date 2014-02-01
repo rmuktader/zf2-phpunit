@@ -8,9 +8,13 @@ use Zend\View\Model\ViewModel;
 class AlbumController extends AbstractActionController
 {
 
+    protected $albumTable;
+
     public function indexAction()
     {
-        return new ViewModel();
+        return new ViewModel(array(
+            'albums' => $this->getAlbumTable()->fetchAll(),
+        ));
     }
 
     public function addAction()
@@ -28,6 +32,12 @@ class AlbumController extends AbstractActionController
         return new ViewModel();
     }
 
-
+    public function getAlbumTable()
+    {
+        if (!$this->albumTable) {
+            $sm = $this->getServiceLocator();
+            $this->albumTable = $sm->get('Album\Model\AlbumTable');
+        }
+        return $this->albumTable;
+    }
 }
-
