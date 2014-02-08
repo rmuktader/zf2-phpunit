@@ -4,6 +4,7 @@ namespace AlbumTest\Model;
 
 use PHPUnit_Framework_TestCase;
 use Album\Model\Album;
+use Zend\InputFilter\InputFilterAwareInterface;
 
 class AlbumTest extends \PHPUnit_Framework_TestCase
 {
@@ -26,6 +27,11 @@ class AlbumTest extends \PHPUnit_Framework_TestCase
         parent::setup();
     }
 
+    public function testAblumImplementsInputFilterAwareInterface()
+    {
+        $this->assertTrue($this->album instanceof InputFilterAwareInterface);
+    }
+    
     public function testAlbumId()
     {
         $this->assertEquals($this->album->id, $this->albumData['id']);
